@@ -1,0 +1,6 @@
+alert_email            = "your-email@example.com"
+cloudtrail_bucket_name = "your-cloudtrail-bucket-name"
+
+# Provide a domain name to enable HTTPS with ACM certificate.
+# Leave empty string "" to use HTTP-only (for testing/demo).
+domain_name = "photoshare.yourdomain.com"

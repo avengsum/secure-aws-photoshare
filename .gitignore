@@ -1,0 +1,65 @@
+# Terraform: local cache, state, plans, and private variable values
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!terraform.tfvars.example
+!*.auto.tfvars.example
+crash.log
+crash.*.log
+
+# Credentials and secrets
+.aws/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+*.secret
+secrets/
+
+# Python and Flask runtime files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+instance/
+.flask_session/
+
+# Test, coverage, build, and scan output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+.hypothesis/
+build/
+dist/
+*.egg-info/
+.eggs/
+*.sarif
+*.log
+*.log.*
+
+# Local container overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Editor and operatingsystem files
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini

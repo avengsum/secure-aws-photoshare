@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - SecurePhotoshare{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Upload Photo</h2>
+    <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label for="photo">Select image (JPG, PNG, GIF, WebP — max 5 MB)</label>
+            <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif,image/webp" required>
+        </div>
+        <button type="submit" class="btn">Upload</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Recent Uploads</h2>
+    {% if uploads %}
+        <ul class="upload-list">
+            {% for upload in uploads %}
+                <li>
+                    <span>{{ upload.original_filename }}</span>
+                    <span style="color: #64748b;">{{ upload.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p style="color: #64748b; margin-top: 0.5rem;">No uploads yet.</p>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top: 1rem;">
+    <h2>Security Features <span class="badge">Active</span></h2>
+    <ul style="list-style: none; margin-top: 0.5rem; font-size: 0.85rem; color: #94a3b8; line-height: 1.8;">
+        <li>CSRF protection on all forms</li>
+        <li>EXIF metadata stripped from uploads</li>
+        <li>File type validation (magic bytes + MIME + extension)</li>
+        <li>Server-side encryption (AES-256 via AWS KMS)</li>
+        <li>Malicious files quarantined automatically</li>
+        <li>Rate limiting on uploads and auth endpoints</li>
+        <li>Session timeout after 30 minutes</li>
+    </ul>
+</div>
+{% endblock %}
