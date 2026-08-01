@@ -38,7 +38,9 @@ resource "aws_ecr_repository" "app" {
   }
 
   encryption_configuration {
-    encryption_type = "AES256"
+    encryption_type = "KMS"
+
+    kms_key = module.storage.kms_key_arn
   }
 
   tags = {

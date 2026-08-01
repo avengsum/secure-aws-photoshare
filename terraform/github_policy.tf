@@ -7,12 +7,7 @@ data "aws_iam_policy_document" "github_permissions" {
     effect = "Allow"
 
     actions = [
-      "ecr:GetAuthorizationToken",
-      "ecr:BatchCheckLayerAvailability",
-      "ecr:CompleteLayerUpload",
-      "ecr:UploadLayerPart",
-      "ecr:InitiateLayerUpload",
-      "ecr:PutImage"
+      "ecr:GetAuthorizationToken"
     ]
 
     resources = [
@@ -31,7 +26,7 @@ data "aws_iam_policy_document" "github_permissions" {
     ]
 
     resources = [
-      "*"
+      "arn:aws:ssm:*:*:document/*"
     ]
   }
 }
@@ -41,4 +36,13 @@ resource "aws_iam_policy" "github_actions" {
   name = "GitHubActionsPolicy"
 
   policy = data.aws_iam_policy_document.github_permissions.json
+}
+
+
+resource "aws_iam_role_policy_attachment" "github_actions" {
+
+  role       = aws_iam_role.github_actions.name
+
+  policy_arn = aws_iam_policy.github_actions.arn
+
 }
