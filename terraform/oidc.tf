@@ -47,7 +47,12 @@ data "aws_iam_policy_document" "github_trust" {
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:avengsum/secure-aws-photoshare:ref:refs/heads/main"
+        "repo:avengsum/secure-aws-photoshare:ref:refs/heads/main",
+        "repo:avengsum/secure-aws-photoshare:environment:production",
+
+
+        "repo:avengsum@*/secure-aws-photoshare@*:ref:refs/heads/main",
+        "repo:avengsum@*/secure-aws-photoshare@*:environment:production"
       ]
     }
   }
