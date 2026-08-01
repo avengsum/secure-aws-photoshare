@@ -26,8 +26,23 @@ data "aws_iam_policy_document" "github_permissions" {
     ]
 
     resources = [
-      "arn:aws:ssm:*:*:document/*"
+      "arn:aws:ssm:*:*:document/AWS-RunShellScript",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*"
     ]
+  }
+
+  statement {
+
+    sid    = "DeploymentDiscovery"
+    effect = "Allow"
+
+    actions = [
+      "autoscaling:DescribeAutoScalingGroups",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth"
+    ]
+
+    resources = ["*"]
   }
 
   statement {

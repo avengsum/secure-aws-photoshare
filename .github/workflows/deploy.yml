@@ -69,6 +69,7 @@ jobs:
 
       - name: Deploy via SSM Run Command
         run: |
+          ECR_REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION}.amazonaws.com
           INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
             --auto-scaling-group-names photoshare-asg \
             --query "AutoScalingGroups[0].Instances[*].InstanceId" \
@@ -79,7 +80,7 @@ jobs:
               --instance-ids "$INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \
               --parameters "commands=[
-                'aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}',
+                'aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY',
                 'docker pull ${{ needs.build-and-push.outputs.image_tag }}',
                 'docker stop photoshare || true',
                 'docker rm photoshare || true',
