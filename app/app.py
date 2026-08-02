@@ -9,6 +9,7 @@ from io import BytesIO
 
 import boto3
 import pymysql
+from botocore.config import Config as BotoConfig
 from PIL import Image
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -357,7 +358,11 @@ def dashboard():
             conn.close()
 
     if uploads:
-        s3 = boto3.client("s3", region_name=app.config["AWS_REGION"])
+        s3 = boto3.client(
+            "s3",
+            region_name=app.config["AWS_REGION"],
+            config=BotoConfig(signature_version="s3v4"),
+        )
 
         for upload in uploads:
             try:
