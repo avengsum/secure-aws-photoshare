@@ -210,6 +210,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
 
     filter {}
 
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+
     expiration {
       days = 365
     }
@@ -231,6 +235,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
 resource "aws_cloudtrail" "photoshare" {
   name                          = "photoshare-trail"
   s3_bucket_name                = aws_s3_bucket.cloudtrail.id
+  kms_key_id                    = var.kms_key_arn
   include_global_service_events = true
   is_multi_region_trail         = true
   enable_log_file_validation    = true
