@@ -34,6 +34,15 @@ chmod 600 /opt/photoshare/.env
 aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin ${ecr_registry}
 docker pull ${ecr_registry}/${ecr_repository}:latest
 
+# Initialize or upgrade the database before starting the web application.
+docker run --rm \
+  --env-file /opt/photoshare/.env \
+  --read-only \
+  --tmpfs /tmp \
+  -e PYTHONDONTWRITEBYTECODE=1 \
+  ${ecr_registry}/${ecr_repository}:latest \
+  python /app/migrate.py
+
 # Run application container
 docker run -d \
   --name photoshare \

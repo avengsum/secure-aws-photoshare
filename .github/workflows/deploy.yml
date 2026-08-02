@@ -81,6 +81,7 @@ jobs:
               --parameters "commands=[
                 'aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY',
                 'docker pull ${{ needs.build-and-push.outputs.image_tag }}',
+                'docker run --rm --env-file /opt/photoshare/.env --read-only --tmpfs /tmp -e PYTHONDONTWRITEBYTECODE=1 ${{ needs.build-and-push.outputs.image_tag }} python /app/migrate.py',
                 'docker stop photoshare || true',
                 'docker rm photoshare || true',
                 'docker run -d --name photoshare --restart unless-stopped -p 8000:8000 --env-file /opt/photoshare/.env ${{ needs.build-and-push.outputs.image_tag }}'
