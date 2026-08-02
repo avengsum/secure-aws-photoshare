@@ -135,7 +135,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_free_storage" {
 }
 
 resource "aws_s3_bucket" "cloudtrail" {
-  bucket = var.cloudtrail_bucket_name
+  bucket        = var.cloudtrail_bucket_name
   force_destroy = true
 
 }
@@ -367,7 +367,7 @@ data "aws_iam_policy_document" "config_s3_policy" {
       identifiers = ["config.amazonaws.com"]
     }
 
-    actions   = ["s3:PutObject"]
+    actions = ["s3:PutObject"]
 
     resources = [
       "${aws_s3_bucket.config.arn}/AWSLogs/${data.aws_caller_identity.current.account_id}/Config/*"
@@ -433,7 +433,7 @@ resource "aws_config_config_rule" "restricted_ssh" {
   }
 
   depends_on = [
-    aws_config_configuration_recorder_status.main,aws_config_configuration_recorder.main,
+    aws_config_configuration_recorder_status.main, aws_config_configuration_recorder.main,
     aws_config_delivery_channel.main
   ]
 }
@@ -640,6 +640,14 @@ resource "aws_wafv2_web_acl" "main" {
         vendor_name = "AWS"
 
         name = "AWSManagedRulesCommonRuleSet"
+
+        rule_action_override {
+          name = "SizeRestrictions_BODY"
+
+          action_to_use {
+            count {}
+          }
+        }
 
       }
 

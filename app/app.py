@@ -12,7 +12,7 @@ import pymysql
 from PIL import Image
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    flash, session, abort, jsonify
+    flash, session, abort, jsonify, has_request_context
 )
 from flask_wtf import CSRFProtect
 from flask_limiter import Limiter
@@ -31,8 +31,17 @@ logging.basicConfig(
 
 class RequestIdFilter(logging.Filter):
     def filter(self, record):
-        record.request_id = getattr(request, "request_id", "-")
+        if has_request_context():
+            record.request_id = getattr(request, "request_id", "-")
+        else:
+            record.request_id = "-"
         return True
+
+
+# Apply the request-id default to every handler, including boto3 and Gunicorn
+# records that do not originate from the application logger.
+for handler in logging.getLogger().handlers:
+    handler.addFilter(RequestIdFilter())
 
 
 logger = logging.getLogger(__name__)
