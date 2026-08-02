@@ -47,7 +47,16 @@ jobs:
           path: bandit-report.json
 
       - name: Safety dependency check
-        run: safety check -r app/requirements.txt --output json > safety-report.json
+        shell: bash
+        run: |
+          set +e
+          safety scan --target app/requirements.txt --output json > safety-report.json
+          safety_status=$?
+          if [ "$safety_status" -ne 0 ]; then
+            echo "Safety found dependency vulnerabilities or scan errors:"
+            cat safety-report.json
+          fi
+          exit "$safety_status"
 
       - name: Upload Safety report
         if: always()
