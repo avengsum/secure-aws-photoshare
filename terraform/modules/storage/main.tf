@@ -346,11 +346,13 @@ resource "aws_db_instance" "mysql" {
 resource "aws_secretsmanager_secret" "db" {
   name       = "photoshare-db-password"
   kms_key_id = aws_kms_key.main.arn
+   recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret" "flask_session" {
   name       = "photoshare-flask-session-secret"
   kms_key_id = aws_kms_key.main.arn
+   recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "flask_session" {
