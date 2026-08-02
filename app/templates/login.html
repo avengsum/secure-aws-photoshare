@@ -1,22 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Login - SecurePhotoshare{% endblock %}
 {% block content %}
-<div class="card">
-    <h2>Login</h2>
-    <form method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required autocomplete="username">
+<div style="max-width: 500px; margin: 0 auto;">
+    <div class="cyber-panel panel-cyan">
+        <h1 class="glitch-text text-cyan">ACCESS<br>TERMINAL</h1>
+        <div class="subtitle">AUTHORIZED PERSONNEL ONLY</div>
+        
+        <div style="margin: 2rem 0; border-top: 1px dashed rgba(0,243,255,0.3); padding-top: 1rem; color: var(--cyan); font-size: 0.9rem; letter-spacing: 1px;">
+            > LOGIN TO CONTINUE /////
         </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required autocomplete="current-password">
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="username">USERNAME</label>
+                <input type="text" id="username" name="username" class="cyber-input" required autocomplete="username" placeholder="Enter your username">
+            </div>
+            <div class="form-group">
+                <label for="password">PASSWORD</label>
+                <input type="password" id="password" name="password" class="cyber-input" required autocomplete="current-password" placeholder="Enter your password">
+            </div>
+            <button type="submit" class="btn btn-green">LOGIN -></button>
+        </form>
+        
+        <div style="margin-top: 2rem; text-align: center; position: relative;">
+            <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border-color); z-index: 1;"></div>
+            <span style="background: var(--panel-bg); padding: 0 1rem; color: var(--text-muted); font-size: 0.85rem; position: relative; z-index: 2;">OR</span>
         </div>
-        <button type="submit" class="btn">Login</button>
-    </form>
-    <p style="margin-top: 1rem; font-size: 0.9rem; color: #94a3b8;">
-        No account? <a href="{{ url_for('register') }}" style="color: #38bdf8;">Register</a>
-    </p>
+        
+        <p style="margin-top: 2rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+            Don't have an account? <a href="{{ url_for('register') }}" class="link-muted link-pink">REGISTER ></a>
+        </p>
+    </div>
 </div>
 {% endblock %}

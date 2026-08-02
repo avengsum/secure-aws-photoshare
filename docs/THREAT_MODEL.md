@@ -137,16 +137,3 @@ This document identifies threats to the SecurePhotoshare application using the S
 | No connection pooling | Complexity | Add SQLAlchemy with pool |
 | No antivirus scan | Cost (Lambda + ClamAV) | Add S3 trigger → scan pipeline |
 | Outbound egress unrestricted | Docker pull requirement | Add egress proxy or VPC endpoint for ECR |
-
----
-
-## Compliance Mapping
-
-| Requirement | Control |
-|-------------|---------|
-| NIST 800-53 AC-2 | User registration, session management |
-| NIST 800-53 AU-2 | CloudTrail, structured application logs |
-| NIST 800-53 SC-8 | TLS 1.3, HSTS |
-| NIST 800-53 SC-28 | KMS encryption at rest |
-| NIST 800-53 SI-3 | File validation, quarantine |
-| AWS Well-Architected Security Pillar | IAM, detective controls, encryption, network |

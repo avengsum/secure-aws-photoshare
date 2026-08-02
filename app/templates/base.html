@@ -4,56 +4,118 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SecurePhotoshare{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-dark: #050508;
+            --panel-bg: rgba(10, 15, 20, 0.85);
+            --cyan: #00f3ff;
+            --pink: #ff0055;
+            --green: #00ff66;
+            --text-main: #e0e6ed;
+            --text-muted: #6b7280;
+            --border-color: #1f2937;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
-        .container { max-width: 800px; margin: 0 auto; padding: 2rem; }
-        .nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; }
-        .nav-brand { font-size: 1.2rem; font-weight: 700; color: #38bdf8; text-decoration: none; }
-        .nav-links { display: flex; gap: 1rem; align-items: center; }
-        .nav-links a, .nav-links button { color: #94a3b8; text-decoration: none; background: none; border: none; cursor: pointer; font-size: 0.9rem; }
-        .nav-links a:hover, .nav-links button:hover { color: #e2e8f0; }
-        .card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 2rem; margin-top: 2rem; }
-        .form-group { margin-bottom: 1.2rem; }
-        .form-group label { display: block; margin-bottom: 0.4rem; color: #94a3b8; font-size: 0.9rem; }
-        .form-group input[type="text"], .form-group input[type="password"], .form-group input[type="file"] { width: 100%; padding: 0.6rem 0.8rem; background: #0f172a; border: 1px solid #475569; border-radius: 4px; color: #e2e8f0; font-size: 1rem; }
-        .form-group input:focus { outline: none; border-color: #38bdf8; }
-        .btn { display: inline-block; padding: 0.6rem 1.4rem; background: #2563eb; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95rem; text-decoration: none; }
-        .btn:hover { background: #1d4ed8; }
-        .btn-danger { background: #dc2626; }
-        .btn-danger:hover { background: #b91c1c; }
-        .flash { padding: 0.8rem 1rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
-        .flash-error { background: #451a2a; border: 1px solid #dc2626; color: #fca5a5; }
-        .flash-success { background: #1a3a2a; border: 1px solid #16a34a; color: #86efac; }
-        .flash-warning { background: #3a2a1a; border: 1px solid #d97706; color: #fcd34d; }
-        h1, h2 { margin-bottom: 1rem; }
-        .upload-list { list-style: none; margin-top: 1rem; }
-        .upload-list li { padding: 0.6rem 0; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; font-size: 0.9rem; }
-        .badge { display: inline-block; padding: 0.2rem 0.5rem; background: #16a34a; border-radius: 3px; font-size: 0.75rem; }
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 50%, #111 0%, #000 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        .nav {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .nav-brand { color: var(--cyan); text-decoration: none; font-size: 1.2rem; text-shadow: 0 0 5px var(--cyan); letter-spacing: 2px; }
+        .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+        .nav-links a, .nav-links button {
+            color: var(--text-muted); text-decoration: none; background: none; border: none; font-family: inherit; font-size: 1rem; cursor: pointer; text-transform: uppercase; transition: color 0.3s;
+        }
+        .nav-links a:hover, .nav-links button:hover { color: var(--text-main); }
+        .container { width: 100%; max-width: 1000px; position: relative; }
+        .flash-container { margin-bottom: 1.5rem; }
+        .flash { padding: 1rem; border-left: 4px solid; margin-bottom: 1rem; background: rgba(0,0,0,0.5); font-size: 0.9rem; letter-spacing: 1px; }
+        .flash-error { border-color: var(--pink); color: var(--pink); box-shadow: inset 10px 0 20px rgba(255,0,85,0.1); }
+        .flash-success { border-color: var(--green); color: var(--green); box-shadow: inset 10px 0 20px rgba(0,255,102,0.1); }
+        .flash-warning { border-color: #ffaa00; color: #ffaa00; box-shadow: inset 10px 0 20px rgba(255,170,0,0.1); }
+        .cyber-panel {
+            background: var(--panel-bg); border: 1px solid var(--border-color); padding: 2.5rem; position: relative; border-radius: 4px; overflow: hidden; margin-bottom: 2rem;
+        }
+        .cyber-panel::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+        }
+        .panel-cyan::before { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+        .panel-cyan { border: 1px solid rgba(0, 243, 255, 0.3); }
+        .panel-pink::before { background: var(--pink); box-shadow: 0 0 10px var(--pink); }
+        .panel-pink { border: 1px solid rgba(255, 0, 85, 0.3); }
+        .panel-green::before { background: var(--green); box-shadow: 0 0 10px var(--green); }
+        .panel-green { border: 1px solid rgba(0, 255, 102, 0.3); }
+        .glitch-text {
+            font-size: 2.5rem; font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 4px; position: relative;
+        }
+        .text-cyan { color: #fff; text-shadow: 2px 0 var(--cyan), -2px 0 var(--pink); }
+        .text-pink { color: #fff; text-shadow: 2px 0 var(--pink), -2px 0 var(--cyan); }
+        .text-green { color: var(--green); text-shadow: 0 0 5px rgba(0,255,102,0.5); }
+        .subtitle { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-main); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+        .form-group label span { color: var(--text-muted); font-size: 0.75rem; margin-left: 0.5rem; }
+        .cyber-input {
+            width: 100%; padding: 0.8rem 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-main); font-family: inherit; font-size: 1rem; outline: none; transition: all 0.3s;
+        }
+        .cyber-input:focus { border-color: var(--text-main); box-shadow: inset 0 0 5px rgba(255,255,255,0.1); }
+        .panel-cyan .cyber-input:focus { border-color: var(--cyan); box-shadow: inset 0 0 5px rgba(0,243,255,0.2); }
+        .panel-pink .cyber-input:focus { border-color: var(--pink); box-shadow: inset 0 0 5px rgba(255,0,85,0.2); }
+        .btn {
+            display: inline-block; width: 100%; padding: 1rem; background: transparent; color: var(--text-main); text-align: center; font-family: inherit; font-size: 1rem; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.3s; text-decoration: none; margin-top: 1rem;
+        }
+        .btn-cyan { border-color: var(--cyan); color: var(--cyan); }
+        .btn-cyan:hover { background: rgba(0,243,255,0.1); box-shadow: 0 0 15px rgba(0,243,255,0.3); }
+        .btn-pink { border-color: var(--pink); color: var(--pink); }
+        .btn-pink:hover { background: rgba(255,0,85,0.1); box-shadow: 0 0 15px rgba(255,0,85,0.3); }
+        .btn-green { border-color: var(--green); color: var(--green); }
+        .btn-green:hover { background: rgba(0,255,102,0.1); box-shadow: 0 0 15px rgba(0,255,102,0.3); }
+        .link-muted { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; transition: color 0.3s; }
+        .link-muted:hover { color: var(--text-main); }
+        .link-cyan { color: var(--cyan); }
+        .link-pink { color: var(--pink); }
     </style>
 </head>
 <body>
     <nav class="nav">
-        <a href="/" class="nav-brand">SecurePhotoshare</a>
+        <a href="/" class="nav-brand">SECURE_PHOTOSHARE //</a>
         <div class="nav-links">
             {% if session.get('user_id') %}
-                <span>{{ session.get('username') }}</span>
+                <span style="color: var(--green);">{{ session.get('username') }} [ONLINE]</span>
                 <form method="POST" action="{{ url_for('logout') }}" style="display:inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit">Logout</button>
+                    <button type="submit" style="color: var(--pink);">LOGOUT</button>
                 </form>
             {% else %}
-                <a href="{{ url_for('login') }}">Login</a>
-                <a href="{{ url_for('register') }}">Register</a>
+                <a href="{{ url_for('login') }}">LOGIN</a>
+                <a href="{{ url_for('register') }}">REGISTER</a>
             {% endif %}
         </div>
     </nav>
     <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, message in messages %}
-                <div class="flash flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endwith %}
+        <div class="flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">> {{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+        </div>
         {% block content %}{% endblock %}
     </div>
 </body>
