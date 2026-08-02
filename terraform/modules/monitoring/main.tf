@@ -5,7 +5,43 @@ data "aws_caller_identity" "current" {}
 resource "aws_cloudwatch_log_group" "photoshare" {
   name              = "/photoshare/application"
   retention_in_days = var.log_retention_days
+  kms_key_id        = var.kms_key_arn
+}
 
+resource "aws_cloudwatch_log_group" "cloudtrail" {
+  name              = "/aws/cloudtrail/photoshare"
+  retention_in_days = var.log_retention_days
+  kms_key_id        = var.kms_key_arn
+}
+
+resource "aws_iam_role" "cloudtrail_logs" {
+  name = "photoshare-cloudtrail-cloudwatch-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "cloudtrail.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "cloudtrail_logs" {
+  name = "photoshare-cloudtrail-cloudwatch-policy"
+  role = aws_iam_role.cloudtrail_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ]
+      Resource = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+    }]
+  })
 }
 
 resource "aws_sns_topic" "alerts" {
@@ -134,6 +170,9 @@ resource "aws_cloudwatch_metric_alarm" "rds_free_storage" {
   ]
 }
 
+#checkov:skip=CKV_AWS_18:Central audit bucket; access logging would create an unnecessary logging loop.
+#checkov:skip=CKV_AWS_144:Cross-region replication is disabled for this single-region portfolio deployment.
+#checkov:skip=CKV2_AWS_62:CloudTrail delivery buckets are service destinations, not application event sources.
 resource "aws_s3_bucket" "cloudtrail" {
   bucket        = var.cloudtrail_bucket_name
   force_destroy = true
@@ -159,6 +198,21 @@ resource "aws_s3_bucket_versioning" "cloudtrail" {
   }
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
+  bucket = aws_s3_bucket.cloudtrail.id
+
+  rule {
+    id     = "expire-old-audit-logs"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = 365
+    }
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
   bucket = aws_s3_bucket.cloudtrail.id
   rule {
@@ -178,6 +232,9 @@ resource "aws_cloudtrail" "photoshare" {
   is_multi_region_trail         = true
   enable_log_file_validation    = true
   enable_logging                = true
+  sns_topic_name                = aws_sns_topic.alerts.name
+  cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+  cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail_logs.arn
 
   event_selector {
     read_write_type           = "All"
@@ -304,6 +361,9 @@ resource "aws_iam_role_policy_attachment" "config" {
 
 }
 
+#checkov:skip=CKV_AWS_18:Central Config delivery bucket; access logging would require another bucket and create unnecessary audit noise.
+#checkov:skip=CKV_AWS_144:Cross-region replication is disabled for this single-region portfolio deployment.
+#checkov:skip=CKV2_AWS_62:AWS Config delivery buckets are service destinations, not application event sources.
 resource "aws_s3_bucket" "config" {
 
   bucket = var.config_bucket_name
@@ -319,6 +379,29 @@ resource "aws_s3_bucket_public_access_block" "config" {
   block_public_policy     = true
   restrict_public_buckets = true
 
+}
+
+resource "aws_s3_bucket_versioning" "config" {
+  bucket = aws_s3_bucket.config.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "config" {
+  bucket = aws_s3_bucket.config.id
+
+  rule {
+    id     = "expire-old-config-snapshots"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = 365
+    }
+  }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "config" {
@@ -463,6 +546,7 @@ resource "aws_config_config_rule" "security_baseline" {
 }
 
 resource "aws_guardduty_detector" "main" {
+  #checkov:skip=CKV2_AWS_3:GuardDuty is opt-in because the account requires a paid service subscription.
   count  = var.enable_managed_security_services ? 1 : 0
   enable = true
 }
@@ -601,6 +685,7 @@ resource "aws_flow_log" "vpc" {
 resource "aws_cloudwatch_log_group" "waf" {
   name              = "aws-waf-logs-photoshare"
   retention_in_days = var.log_retention_days
+  kms_key_id        = var.kms_key_arn
 }
 
 resource "aws_wafv2_web_acl" "main" {

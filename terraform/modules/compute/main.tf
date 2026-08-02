@@ -63,6 +63,7 @@ resource "aws_launch_template" "app" {
 }
 
 resource "aws_lb_target_group" "app" {
+  #checkov:skip=CKV_AWS_378:TLS terminates at the ALB; private EC2 targets accept traffic only from the ALB security group.
   name     = "photoshare-tg"
   port     = 80
   protocol = "HTTP"
@@ -88,6 +89,7 @@ resource "aws_lb_target_group" "app" {
 }
 
 resource "aws_lb" "app" {
+  #checkov:skip=CKV2_AWS_20:HTTP redirects to HTTPS when domain_name is configured; the HTTP-only fallback is documented for this portfolio deployment.
   name     = "photoshare-alb"
   internal = false
 
@@ -101,11 +103,65 @@ resource "aws_lb" "app" {
 
   drop_invalid_header_fields = true
 
-  enable_deletion_protection = false
+  enable_deletion_protection = true
+
+  access_logs {
+    bucket  = aws_s3_bucket.alb_logs.id
+    prefix  = "alb"
+    enabled = true
+  }
 
   tags = {
     Name = "photoshare-alb"
   }
+}
+
+resource "aws_s3_bucket" "alb_logs" {
+  bucket        = "${var.photo_bucket_name}-alb-logs"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_public_access_block" "alb_logs" {
+  bucket                  = aws_s3_bucket.alb_logs.id
+  block_public_acls       = true
+  ignore_public_acls      = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+data "aws_elb_service_account" "main" {}
+
+resource "aws_s3_bucket_policy" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowALBAccessLogs"
+      Effect    = "Allow"
+      Principal = { AWS = data.aws_elb_service_account.main.arn }
+      Action    = "s3:PutObject"
+      Resource  = "${aws_s3_bucket.alb_logs.arn}/alb/AWSLogs/*"
+    }]
+  })
 }
 
 resource "aws_autoscaling_group" "app" {
@@ -181,6 +237,10 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "HTTP"
+
+  #checkov:skip=CKV_AWS_103:This is the HTTP-only development fallback; TLS is enforced by the HTTPS listener when domain_name is configured.
+
+  #checkov:skip=CKV_AWS_2:This listener is the documented HTTP-only development fallback; production uses the HTTPS listener.
 
   default_action {
     type             = "forward"

@@ -81,6 +81,8 @@ resource "aws_kms_alias" "main" {
   target_key_id = aws_kms_key.main.key_id
 }
 
+#checkov:skip=CKV_AWS_18:Primary photo access is audited through CloudTrail S3 data events.
+#checkov:skip=CKV_AWS_144:Cross-region replication is disabled for this single-region portfolio deployment.
 resource "aws_s3_bucket" "photos" {
   bucket = var.bucket_name
 
@@ -199,6 +201,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "photos" {
   }
 }
 
+#checkov:skip=CKV_AWS_18:Quarantine access is audited through CloudTrail and does not require another logging bucket.
+#checkov:skip=CKV_AWS_144:Cross-region replication is disabled for this single-region portfolio deployment.
+#checkov:skip=CKV2_AWS_62:Quarantine is a controlled destination bucket, not an application event source.
 resource "aws_s3_bucket" "quarantine" {
   bucket = var.quarantine_bucket_name
 
@@ -252,6 +257,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "quarantine" {
     status = "Enabled"
 
     filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
 
     expiration {
       days = 30
@@ -309,6 +318,12 @@ resource "random_password" "flask_session" {
 }
 
 resource "aws_db_instance" "mysql" {
+  # These four controls are intentionally disabled for the free-tier demo.
+  # Enable them for production: backups, Multi-AZ, enhanced monitoring, and IAM DB auth.
+  #checkov:skip=CKV_AWS_133:Free-tier demo uses zero-day automated backup retention; production variable should be set to 7 or more.
+  #checkov:skip=CKV_AWS_157:Multi-AZ is disabled for the free-tier demo; production should enable it.
+  #checkov:skip=CKV_AWS_118:Enhanced monitoring is disabled for the free-tier demo to avoid additional monitoring charges.
+  #checkov:skip=CKV_AWS_161:IAM database authentication is disabled because the application uses Secrets Manager credentials.
   identifier           = "photoshare-db"
   engine               = "mysql"
   engine_version       = "8.0"
@@ -343,16 +358,18 @@ resource "aws_db_instance" "mysql" {
   apply_immediately          = false
 }
 
+#checkov:skip=CKV2_AWS_57:Rotation requires a rotation Lambda and coordinated application credential refresh; this portfolio uses Secrets Manager retrieval with controlled deployment rotation.
 resource "aws_secretsmanager_secret" "db" {
-  name       = "photoshare-db-password"
-  kms_key_id = aws_kms_key.main.arn
-   recovery_window_in_days = 0
+  name                    = "photoshare-db-password"
+  kms_key_id              = aws_kms_key.main.arn
+  recovery_window_in_days = 0
 }
 
+#checkov:skip=CKV2_AWS_57:Automatic rotation would invalidate active sessions; rotation is intentionally controlled through deployment.
 resource "aws_secretsmanager_secret" "flask_session" {
-  name       = "photoshare-flask-session-secret"
-  kms_key_id = aws_kms_key.main.arn
-   recovery_window_in_days = 0
+  name                    = "photoshare-flask-session-secret"
+  kms_key_id              = aws_kms_key.main.arn
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "flask_session" {

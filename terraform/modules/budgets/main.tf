@@ -130,7 +130,8 @@ resource "aws_cloudwatch_metric_alarm" "asg_max_capacity" {
 }
 
 resource "aws_sns_topic" "budget_alerts" {
-  name = "photoshare-budget-alerts"
+  name              = "photoshare-budget-alerts"
+  kms_master_key_id = "alias/aws/sns"
 }
 
 resource "aws_sns_topic_subscription" "email" {

@@ -5,6 +5,8 @@ data "aws_availability_zones" "available" {
 }
 
 resource "aws_vpc" "main" {
+  #checkov:skip=CKV2_AWS_11:VPC flow logs are created in the monitoring module and use an encrypted CloudWatch log group.
+  #checkov:skip=CKV2_AWS_12:The default security group is explicitly emptied below.
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
@@ -28,7 +30,7 @@ resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = data.aws_availability_zones.available.names[0]
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     Name = "public-subnet-a"
@@ -40,7 +42,7 @@ resource "aws_subnet" "public_b" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.2.0/24"
   availability_zone       = data.aws_availability_zones.available.names[1]
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     Name = "public-subnet-b"
@@ -191,6 +193,10 @@ resource "aws_route_table_association" "private_db_b" {
   route_table_id = aws_route_table.private_db.id
 }
 
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.main.id
+}
+
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${data.aws_region.current.region}.s3"
@@ -205,6 +211,7 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
+#checkov:skip=CKV2_AWS_5:This security group is attached to the ALB through the compute module.
 resource "aws_security_group" "alb" {
   name        = "alb-sg"
   description = "ALB Security Group"
@@ -213,6 +220,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   security_group_id = aws_security_group.alb.id
+  description       = "Public HTTP access for the ALB development fallback and HTTPS redirect"
   ip_protocol       = "tcp"
   from_port         = 80
   to_port           = 80
@@ -221,6 +229,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_http" {
 
 resource "aws_vpc_security_group_ingress_rule" "alb_https" {
   security_group_id = aws_security_group.alb.id
+  description       = "Public HTTPS access to the ALB"
   ip_protocol       = "tcp"
   from_port         = 443
   to_port           = 443
@@ -229,12 +238,14 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https" {
 
 resource "aws_vpc_security_group_egress_rule" "alb_to_ec2" {
   security_group_id            = aws_security_group.alb.id
+  description                  = "Allow ALB to reach application instances"
   ip_protocol                  = "tcp"
   from_port                    = 80
   to_port                      = 80
   referenced_security_group_id = aws_security_group.ec2.id
 }
 
+#checkov:skip=CKV2_AWS_5:This security group is attached to the ASG launch template through the compute module.
 resource "aws_security_group" "ec2" {
   name        = "ec2-sg"
   description = "Security Group for EC2 App Instances"
@@ -243,6 +254,7 @@ resource "aws_security_group" "ec2" {
 
 resource "aws_vpc_security_group_egress_rule" "ec2_to_rds" {
   security_group_id            = aws_security_group.ec2.id
+  description                  = "Allow application instances to reach MySQL"
   ip_protocol                  = "tcp"
   from_port                    = 3306
   to_port                      = 3306
@@ -251,6 +263,7 @@ resource "aws_vpc_security_group_egress_rule" "ec2_to_rds" {
 
 resource "aws_vpc_security_group_egress_rule" "ec2_to_vpc_endpoints" {
   security_group_id            = aws_security_group.ec2.id
+  description                  = "Allow application instances to reach VPC endpoints"
   ip_protocol                  = "tcp"
   from_port                    = 443
   to_port                      = 443
@@ -259,6 +272,7 @@ resource "aws_vpc_security_group_egress_rule" "ec2_to_vpc_endpoints" {
 
 resource "aws_vpc_security_group_egress_rule" "ec2_outbound_https" {
   security_group_id = aws_security_group.ec2.id
+  description       = "Allow application instances to pull updates over HTTPS"
   ip_protocol       = "tcp"
   from_port         = 443
   to_port           = 443
@@ -273,6 +287,7 @@ resource "aws_security_group" "vpc_endpoints" {
 
 resource "aws_vpc_security_group_ingress_rule" "ec2_to_vpc_endpoints" {
   security_group_id            = aws_security_group.vpc_endpoints.id
+  description                  = "Allow application instances to use interface endpoints"
   ip_protocol                  = "tcp"
   from_port                    = 443
   to_port                      = 443
@@ -302,20 +317,25 @@ resource "aws_vpc_endpoint" "interface" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_to_ec2" {
-  security_group_id            = aws_security_group.ec2.id
+  security_group_id = aws_security_group.ec2.id
+  description       = "Allow only the ALB security group to reach the application"
+  #checkov:skip=CKV_AWS_260:Port 80 is reachable only from the ALB security group, never from the internet.
   ip_protocol                  = "tcp"
   from_port                    = 80
   to_port                      = 80
   referenced_security_group_id = aws_security_group.alb.id
 }
 
+#checkov:skip=CKV2_AWS_5:This security group is attached to the RDS instance through the storage module.
 resource "aws_security_group" "rds" {
-  name   = "rds-sg"
-  vpc_id = aws_vpc.main.id
+  name        = "rds-sg"
+  description = "RDS security group; access is restricted to the application security group"
+  vpc_id      = aws_vpc.main.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "ec2_to_rds" {
   security_group_id            = aws_security_group.rds.id
+  description                  = "Allow application instances to reach MySQL"
   ip_protocol                  = "tcp"
   from_port                    = 3306
   to_port                      = 3306

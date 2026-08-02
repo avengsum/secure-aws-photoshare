@@ -6,7 +6,7 @@ variable "email_address" {
 variable "log_retention_days" {
   description = "CloudWatch log retention"
   type        = number
-  default     = 30
+  default     = 365
 }
 
 variable "cloudtrail_bucket_name" {
@@ -58,4 +58,3 @@ variable "enable_managed_security_services" {
   type        = bool
   default     = false
 }
-
