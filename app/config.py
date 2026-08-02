@@ -35,7 +35,10 @@ class Config:
 
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_SECURE = os.getenv("FLASK_ENV") == "production"
+    # The current ALB deployment uses HTTP. Set this to true only when the
+    # public endpoint is HTTPS, otherwise browsers will not send the session
+    # cookie and Flask-WTF will report a missing CSRF session token.
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
     PERMANENT_SESSION_LIFETIME = 1800  # 30 minutes
 
     ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}

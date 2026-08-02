@@ -19,6 +19,7 @@ FLASK_SECRET_KEY=$(aws secretsmanager get-secret-value \
 
 cat > /opt/photoshare/.env <<ENVFILE
 FLASK_ENV=production
+SESSION_COOKIE_SECURE=false
 SECRET_KEY=$FLASK_SECRET_KEY
 S3_BUCKET=${photo_bucket_name}
 S3_QUARANTINE_BUCKET=${quarantine_bucket_name}
