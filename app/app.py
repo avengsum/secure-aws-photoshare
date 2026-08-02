@@ -345,16 +345,34 @@ def dashboard():
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT original_filename, uploaded_at FROM uploads "
+                    "SELECT s3_key, original_filename, uploaded_at FROM uploads "
                     "WHERE user_id = %s ORDER BY uploaded_at DESC LIMIT 20",
                     (session["user_id"],),
                 )
                 uploads = cur.fetchall()
-        except pymysql.Error:
-            pass
+        except pymysql.Error as e:
+            logger.error("Database error in dashboard: %s", e)
         finally:
             conn.close()
+
+    if uploads:
+        s3 = boto3.client("s3", region_name=app.config["AWS_REGION"])
+
+        for upload in uploads:
+            try:
+                upload["presigned_url"] = s3.generate_presigned_url("get_objects",Params={
+                    "Bucket": app.config["S3_BUCKET"],
+                    "Key": upload["s3_key"]
+                },
+                ExpiresIn=3600  )
+
+            except Exception as e:
+                logger.error("Failed to generate presigned URL for %s: %s", upload["s3_key"],e)
+                upload["presigned_url"] = None
+
     return render_template("dashboard.html", uploads=uploads)
+                             
+            
 
 
 @app.route("/upload", methods=["POST"])
