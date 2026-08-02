@@ -360,7 +360,7 @@ def dashboard():
 
         for upload in uploads:
             try:
-                upload["presigned_url"] = s3.generate_presigned_url("get_objects",Params={
+                upload["presigned_url"] = s3.generate_presigned_url("get_object", Params={
                     "Bucket": app.config["S3_BUCKET"],
                     "Key": upload["s3_key"]
                 },
