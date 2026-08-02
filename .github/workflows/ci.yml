@@ -1,4 +1,4 @@
-name: CI - Security Scan & Test
+name: CI:Security Scan
 
 on:
   push:
