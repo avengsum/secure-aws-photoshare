@@ -85,18 +85,7 @@
         </div>
     </form>
 
-    <script>
-        document.getElementById('photo').addEventListener('change', function () {
-            const button = document.getElementById('upload-btn');
-            const help = document.querySelector('.upload-area-label span.sub');
-            if (this.files.length > 0) {
-                help.textContent = 'Selected: ' + this.files[0].name;
-                button.disabled = false;
-                button.style.opacity = '1';
-                button.textContent = 'INITIALIZE UPLOAD ->';
-            }
-        });
-    </script>
+    <script src="{{ url_for('static', filename='upload.js') }}" defer></script>
 
     <div style="border-top: 1px solid var(--border-color); padding-top: 2rem;">
         <div style="display: flex; justify-content: space-between; align-items: center;">

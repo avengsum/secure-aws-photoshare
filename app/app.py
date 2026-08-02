@@ -84,7 +84,8 @@ def set_security_headers(response):
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data:; "
+        "script-src 'self'; "
+        "img-src 'self' data: https:; "
         "frame-ancestors 'none';"
     )
     if app.config["SESSION_COOKIE_SECURE"]:
