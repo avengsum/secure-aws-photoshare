@@ -89,6 +89,7 @@ resource "aws_lb_target_group" "app" {
 }
 
 resource "aws_lb" "app" {
+  #checkov:skip=CKV2_AWS_28:WAF association is managed by module.monitoring.aws_wafv2_web_acl_association.alb.
   #checkov:skip=CKV2_AWS_20:HTTP redirects to HTTPS when domain_name is configured; the HTTP-only fallback is documented for this portfolio deployment.
   name     = "photoshare-alb"
   internal = false
@@ -117,8 +118,40 @@ resource "aws_lb" "app" {
 }
 
 resource "aws_s3_bucket" "alb_logs" {
+  #checkov:skip=CKV_AWS_18:This is a dedicated ALB log destination; self-logging would create a logging loop.
+  #checkov:skip=CKV2_AWS_62:This is a load-balancer log destination, not an application event source.
+  #checkov:skip=CKV_AWS_144:Cross-region replication is disabled for this single-region portfolio deployment.
+  #checkov:skip=CKV2_AWS_61:Lifecycle configuration is declared below for this bucket.
+  #checkov:skip=CKV_AWS_145:ALB access logs use the AWS-supported SSE-S3 encryption because ALB log delivery does not support this customer KMS key configuration.
   bucket        = "${var.photo_bucket_name}-alb-logs"
   force_destroy = true
+}
+
+resource "aws_s3_bucket_versioning" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  rule {
+    id     = "expire-alb-logs"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+
+    expiration {
+      days = 90
+    }
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "alb_logs" {
@@ -133,7 +166,7 @@ resource "aws_s3_bucket_ownership_controls" "alb_logs" {
   bucket = aws_s3_bucket.alb_logs.id
 
   rule {
-    object_ownership = "BucketOwnerPreferred"
+    object_ownership = "BucketOwnerEnforced"
   }
 }
 

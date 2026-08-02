@@ -84,6 +84,8 @@ resource "aws_kms_alias" "main" {
 #checkov:skip=CKV_AWS_18:Primary photo access is audited through CloudTrail S3 data events.
 #checkov:skip=CKV_AWS_144:Cross-region replication is disabled for this single-region portfolio deployment.
 resource "aws_s3_bucket" "photos" {
+  #checkov:skip=CKV_AWS_18:CloudTrail S3 data events provide object-level audit logging.
+  #checkov:skip=CKV_AWS_144:Single-region portfolio deployment.
   bucket = var.bucket_name
 
   tags = {
@@ -205,6 +207,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "photos" {
 #checkov:skip=CKV_AWS_144:Cross-region replication is disabled for this single-region portfolio deployment.
 #checkov:skip=CKV2_AWS_62:Quarantine is a controlled destination bucket, not an application event source.
 resource "aws_s3_bucket" "quarantine" {
+  #checkov:skip=CKV_AWS_18:CloudTrail audits quarantine access.
+  #checkov:skip=CKV_AWS_144:Single-region portfolio deployment.
+  #checkov:skip=CKV2_AWS_62:Controlled destination bucket, not an event source.
   bucket = var.quarantine_bucket_name
 
   tags = {
@@ -360,6 +365,7 @@ resource "aws_db_instance" "mysql" {
 
 #checkov:skip=CKV2_AWS_57:Rotation requires a rotation Lambda and coordinated application credential refresh; this portfolio uses Secrets Manager retrieval with controlled deployment rotation.
 resource "aws_secretsmanager_secret" "db" {
+  #checkov:skip=CKV2_AWS_57:Rotation requires a coordinated rotation Lambda and application credential refresh.
   name                    = "photoshare-db-password"
   kms_key_id              = aws_kms_key.main.arn
   recovery_window_in_days = 0
@@ -367,6 +373,7 @@ resource "aws_secretsmanager_secret" "db" {
 
 #checkov:skip=CKV2_AWS_57:Automatic rotation would invalidate active sessions; rotation is intentionally controlled through deployment.
 resource "aws_secretsmanager_secret" "flask_session" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation would invalidate active sessions; deployment-controlled rotation is intentional.
   name                    = "photoshare-flask-session-secret"
   kms_key_id              = aws_kms_key.main.arn
   recovery_window_in_days = 0

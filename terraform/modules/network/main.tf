@@ -213,12 +213,14 @@ resource "aws_vpc_endpoint" "s3" {
 
 #checkov:skip=CKV2_AWS_5:This security group is attached to the ALB through the compute module.
 resource "aws_security_group" "alb" {
+  #checkov:skip=CKV2_AWS_5:Attached to the ALB in the compute module.
   name        = "alb-sg"
   description = "ALB Security Group"
   vpc_id      = aws_vpc.main.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
+  #checkov:skip=CKV_AWS_260:HTTP is public only for the documented development fallback and redirects to HTTPS when a domain is configured.
   security_group_id = aws_security_group.alb.id
   description       = "Public HTTP access for the ALB development fallback and HTTPS redirect"
   ip_protocol       = "tcp"
@@ -247,6 +249,7 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_ec2" {
 
 #checkov:skip=CKV2_AWS_5:This security group is attached to the ASG launch template through the compute module.
 resource "aws_security_group" "ec2" {
+  #checkov:skip=CKV2_AWS_5:Attached to the ASG launch template in the compute module.
   name        = "ec2-sg"
   description = "Security Group for EC2 App Instances"
   vpc_id      = aws_vpc.main.id
@@ -328,6 +331,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_to_ec2" {
 
 #checkov:skip=CKV2_AWS_5:This security group is attached to the RDS instance through the storage module.
 resource "aws_security_group" "rds" {
+  #checkov:skip=CKV2_AWS_5:Attached to the RDS instance in the storage module.
   name        = "rds-sg"
   description = "RDS security group; access is restricted to the application security group"
   vpc_id      = aws_vpc.main.id

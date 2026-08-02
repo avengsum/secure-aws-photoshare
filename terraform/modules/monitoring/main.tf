@@ -174,6 +174,9 @@ resource "aws_cloudwatch_metric_alarm" "rds_free_storage" {
 #checkov:skip=CKV_AWS_144:Cross-region replication is disabled for this single-region portfolio deployment.
 #checkov:skip=CKV2_AWS_62:CloudTrail delivery buckets are service destinations, not application event sources.
 resource "aws_s3_bucket" "cloudtrail" {
+  #checkov:skip=CKV_AWS_18:Central audit bucket does not self-log.
+  #checkov:skip=CKV_AWS_144:Single-region portfolio deployment.
+  #checkov:skip=CKV2_AWS_62:Service destination bucket, not an application event source.
   bucket        = var.cloudtrail_bucket_name
   force_destroy = true
 
@@ -365,6 +368,9 @@ resource "aws_iam_role_policy_attachment" "config" {
 #checkov:skip=CKV_AWS_144:Cross-region replication is disabled for this single-region portfolio deployment.
 #checkov:skip=CKV2_AWS_62:AWS Config delivery buckets are service destinations, not application event sources.
 resource "aws_s3_bucket" "config" {
+  #checkov:skip=CKV_AWS_18:Central Config bucket does not self-log.
+  #checkov:skip=CKV_AWS_144:Single-region portfolio deployment.
+  #checkov:skip=CKV2_AWS_62:Service destination bucket, not an application event source.
 
   bucket = var.config_bucket_name
 
@@ -397,6 +403,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "config" {
     status = "Enabled"
 
     filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
 
     expiration {
       days = 365
