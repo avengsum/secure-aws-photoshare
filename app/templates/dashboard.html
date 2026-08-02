@@ -7,7 +7,10 @@
     }
     .upload-area:hover { background: rgba(0,255,102,0.1); }
     .upload-area input[type="file"] {
-        display: none;
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
     }
     .upload-area-label {
         cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: var(--green); font-weight: bold; font-size: 1.2rem; letter-spacing: 1px;
@@ -75,12 +78,25 @@
                 CLICK TO SELECT IMAGE FILE
                 <span class="sub">PNG, JPG, JPEG, WEBP • Max 5MB</span>
             </label>
-            <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif,image/webp" required onchange="document.getElementById('upload-btn').style.display='inline-block'; document.querySelector('.upload-area-label span.sub').innerText = this.files[0].name;">
+            <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif,image/webp" required>
         </div>
         <div style="text-align: right; margin-bottom: 3rem;">
-            <button type="submit" class="btn btn-green" id="upload-btn" style="display: none; width: auto; padding: 0.8rem 2rem;">INITIALIZE UPLOAD -></button>
+            <button type="submit" class="btn btn-green" id="upload-btn" disabled style="width: auto; padding: 0.8rem 2rem; opacity: 0.5;">SELECT AN IMAGE FIRST</button>
         </div>
     </form>
+
+    <script>
+        document.getElementById('photo').addEventListener('change', function () {
+            const button = document.getElementById('upload-btn');
+            const help = document.querySelector('.upload-area-label span.sub');
+            if (this.files.length > 0) {
+                help.textContent = 'Selected: ' + this.files[0].name;
+                button.disabled = false;
+                button.style.opacity = '1';
+                button.textContent = 'INITIALIZE UPLOAD ->';
+            }
+        });
+    </script>
 
     <div style="border-top: 1px solid var(--border-color); padding-top: 2rem;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
