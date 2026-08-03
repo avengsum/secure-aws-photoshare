@@ -32,6 +32,19 @@ data "aws_iam_policy_document" "github_permissions" {
   }
 
   statement {
+    sid    = "SSMReadCommandResult"
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetCommandInvocation"
+    ]
+
+    # GetCommandInvocation does not support resource-level authorization;
+    # this is read-only access used to retrieve the result of SendCommand.
+    resources = ["*"]
+  }
+
+  statement {
 
     sid    = "DeploymentDiscovery"
     effect = "Allow"
