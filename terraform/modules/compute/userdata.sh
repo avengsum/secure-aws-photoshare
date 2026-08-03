@@ -1,18 +1,18 @@
 #!/bin/bash
 set -euo pipefail
 
-dnf update -y
-dnf install -y docker nginx
-systemctl enable docker
-systemctl start docker
-
-# SSM is the controlled deployment channel. Fail bootstrap if the agent is
-# missing instead of creating an instance that cannot be managed securely.
+# Start SSM before long package operations so the instance remains observable
+# even if package installation is slow or fails.
 if ! systemctl cat amazon-ssm-agent.service >/dev/null 2>&1; then
   echo "amazon-ssm-agent.service is missing from the AMI" >&2
   exit 1
 fi
 systemctl enable --now amazon-ssm-agent.service
+
+dnf update -y
+dnf install -y docker nginx
+systemctl enable docker
+systemctl start docker
 
 useradd --system --shell /usr/sbin/nologin photoshare
 
