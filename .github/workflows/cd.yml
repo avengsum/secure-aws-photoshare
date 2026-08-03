@@ -78,6 +78,66 @@ jobs:
             --output text)
 
           for INSTANCE_ID in $INSTANCE_IDS; do
+            echo "Waiting for SSM Agent to become online on $INSTANCE_ID..."
+            ONLINE=""
+            for i in $(seq 1 30); do
+              ONLINE=$(aws ssm describe-instance-information \
+                --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
+                --query "InstanceInformationList[0].PingStatus" \
+                --output text)
+              if [ "$ONLINE" = "Online" ]; then
+                break
+              fi
+              sleep 10
+            done
+
+            if [ "$ONLINE" != "Online" ]; then
+              echo "ERROR: SSM Agent is not online on $INSTANCE_ID after 5 minutes"
+              exit 1
+            fi
+
+            BOOTSTRAP_COMMAND_ID=$(aws ssm send-command \
+              --instance-ids "$INSTANCE_ID" \
+              --document-name "AWS-RunShellScript" \
+              --parameters 'commands=["for i in $(seq 1 60); do if [ -s /opt/photoshare/.env ] && [ -f /opt/photoshare/bootstrap-ready ] && systemctl is-active --quiet nginx; then exit 0; fi; sleep 5; done; echo Bootstrap did not become ready >&2; exit 1"]' \
+              --timeout-seconds 360 \
+              --query "Command.CommandId" \
+              --output text)
+
+            echo "Waiting for application bootstrap on $INSTANCE_ID ($BOOTSTRAP_COMMAND_ID)..."
+            BOOTSTRAP_STATUS="Pending"
+            for i in $(seq 1 60); do
+              BOOTSTRAP_STATUS=$(aws ssm get-command-invocation \
+                --command-id "$BOOTSTRAP_COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query "Status" \
+                --output text 2>/dev/null || echo "Pending")
+              case "$BOOTSTRAP_STATUS" in
+                Success)
+                  break
+                  ;;
+                Failed|Cancelled|TimedOut|Cancelling)
+                  aws ssm get-command-invocation \
+                    --command-id "$BOOTSTRAP_COMMAND_ID" \
+                    --instance-id "$INSTANCE_ID" \
+                    --output json
+                  exit 1
+                  ;;
+              esac
+              sleep 5
+            done
+
+            if [ "$BOOTSTRAP_STATUS" != "Success" ]; then
+              echo "ERROR: Application bootstrap did not complete on $INSTANCE_ID after 5 minutes"
+              aws ssm get-command-invocation \
+                --command-id "$BOOTSTRAP_COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --output json
+              exit 1
+            fi
+          done
+
+          for INSTANCE_ID in $INSTANCE_IDS; do
             COMMAND_ID=$(aws ssm send-command \
               --instance-ids "$INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \

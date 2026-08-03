@@ -6,16 +6,37 @@ dnf install -y docker nginx
 systemctl enable docker
 systemctl start docker
 
+# SSM is the controlled deployment channel. Fail bootstrap if the agent is
+# missing instead of creating an instance that cannot be managed securely.
+if ! systemctl cat amazon-ssm-agent.service >/dev/null 2>&1; then
+  echo "amazon-ssm-agent.service is missing from the AMI" >&2
+  exit 1
+fi
+systemctl enable --now amazon-ssm-agent.service
+
 useradd --system --shell /usr/sbin/nologin photoshare
 
 mkdir -p /opt/photoshare
+rm -f /opt/photoshare/bootstrap-ready
 
 # All Auto Scaling instances retrieve the same session-signing secret.
-FLASK_SECRET_KEY=$(aws secretsmanager get-secret-value \
-  --region ${aws_region} \
-  --secret-id ${flask_session_secret_arn} \
-  --query SecretString \
-  --output text)
+FLASK_SECRET_KEY=""
+for attempt in $(seq 1 30); do
+  FLASK_SECRET_KEY=$(aws secretsmanager get-secret-value \
+    --region ${aws_region} \
+    --secret-id ${flask_session_secret_arn} \
+    --query SecretString \
+    --output text 2>/dev/null || true)
+  if [ -n "$FLASK_SECRET_KEY" ] && [ "$FLASK_SECRET_KEY" != "None" ]; then
+    break
+  fi
+  sleep 10
+done
+
+if [ -z "$FLASK_SECRET_KEY" ] || [ "$FLASK_SECRET_KEY" = "None" ]; then
+  echo "Unable to retrieve the Flask session secret after 5 minutes" >&2
+  exit 1
+fi
 
 cat > /opt/photoshare/.env <<ENVFILE
 FLASK_ENV=production
@@ -29,31 +50,6 @@ DB_SECRET_ID=${secret_arn}
 ENVFILE
 
 chmod 600 /opt/photoshare/.env
-
-# Login to ECR and pull application image
-aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin ${ecr_registry}
-docker pull ${ecr_registry}/${ecr_repository}:latest
-
-# Initialize or upgrade the database before starting the web application.
-docker run --rm \
-  --env-file /opt/photoshare/.env \
-  --read-only \
-  --tmpfs /tmp \
-  -e PYTHONDONTWRITEBYTECODE=1 \
-  ${ecr_registry}/${ecr_repository}:latest \
-  python /app/migrate.py
-
-# Run application container
-docker run -d \
-  --name photoshare \
-  --restart unless-stopped \
-  -p 8000:8000 \
-  --env-file /opt/photoshare/.env \
-  --read-only \
-  --tmpfs /tmp \
-  --memory=512m \
-  --cpus=1 \
-  ${ecr_registry}/${ecr_repository}:latest
 
 # Configure Nginx as reverse proxy
 cat > /etc/nginx/conf.d/photoshare.conf <<'NGINX'
@@ -86,3 +82,8 @@ NGINX
 rm -f /etc/nginx/conf.d/default.conf
 systemctl enable nginx
 systemctl restart nginx
+
+# The CD workflow deploys a specific immutable ECR image after bootstrap.
+# This marker prevents CD from racing user-data initialization.
+touch /opt/photoshare/bootstrap-ready
+chmod 600 /opt/photoshare/bootstrap-ready

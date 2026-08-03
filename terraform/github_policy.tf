@@ -36,7 +36,8 @@ data "aws_iam_policy_document" "github_permissions" {
     effect = "Allow"
 
     actions = [
-      "ssm:GetCommandInvocation"
+      "ssm:GetCommandInvocation",
+      "ssm:DescribeInstanceInformation"
     ]
 
     # GetCommandInvocation does not support resource-level authorization;
