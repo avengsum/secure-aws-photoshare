@@ -112,6 +112,7 @@ resource "aws_lb" "app" {
 
   drop_invalid_header_fields = true
 
+  #checkov:skip=CKV_AWS_150:Deletion protection is enabled by default; the confirmation-gated disposable teardown explicitly opts out through allow_destructive_destroy.
   enable_deletion_protection = !var.allow_destructive_destroy
 
   access_logs {
