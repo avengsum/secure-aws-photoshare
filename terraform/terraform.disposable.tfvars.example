@@ -1,0 +1,3 @@
+# Use this file only for a disposable sandbox teardown.
+# Do not use it for a normal portfolio/production apply.
+disposable_mode = true

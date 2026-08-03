@@ -55,8 +55,8 @@ resource "aws_launch_template" "app" {
   }
 
   metadata_options {
-    http_endpoint               = "enabled"
-    http_tokens                 = "required"
+    http_endpoint = "enabled"
+    http_tokens   = "required"
     #checkov:skip=CKV_AWS_341:Containerized Flask requires hop limit 2 for role credentials; IMDSv2 remains required and metadata tags are disabled.
     http_put_response_hop_limit = 2
     instance_metadata_tags      = "disabled"
@@ -112,7 +112,7 @@ resource "aws_lb" "app" {
 
   drop_invalid_header_fields = true
 
-  enable_deletion_protection = true
+  enable_deletion_protection = !var.allow_destructive_destroy
 
   access_logs {
     bucket  = aws_s3_bucket.alb_logs.id
@@ -132,7 +132,7 @@ resource "aws_s3_bucket" "alb_logs" {
   #checkov:skip=CKV2_AWS_61:Lifecycle configuration is declared below for this bucket.
   #checkov:skip=CKV_AWS_145:ALB access logs use the AWS-supported SSE-S3 encryption because ALB log delivery does not support this customer KMS key configuration.
   bucket        = "${var.photo_bucket_name}-alb-logs"
-  force_destroy = true
+  force_destroy = var.allow_destructive_destroy
 }
 
 resource "aws_s3_bucket_versioning" "alb_logs" {

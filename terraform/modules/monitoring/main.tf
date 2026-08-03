@@ -192,7 +192,7 @@ resource "aws_s3_bucket" "cloudtrail" {
   #checkov:skip=CKV_AWS_144:Single-region portfolio deployment.
   #checkov:skip=CKV2_AWS_62:Service destination bucket, not an application event source.
   bucket        = var.cloudtrail_bucket_name
-  force_destroy = true
+  force_destroy = var.allow_destructive_destroy
 
 }
 
@@ -395,7 +395,8 @@ resource "aws_s3_bucket" "config" {
   #checkov:skip=CKV_AWS_144:Single-region portfolio deployment.
   #checkov:skip=CKV2_AWS_62:Service destination bucket, not an application event source.
 
-  bucket = var.config_bucket_name
+  bucket        = var.config_bucket_name
+  force_destroy = var.allow_destructive_destroy
 
 }
 

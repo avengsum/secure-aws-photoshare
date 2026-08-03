@@ -43,3 +43,9 @@ variable "db_multi_az" {
   type        = bool
   default     = false
 }
+
+variable "allow_destructive_destroy" {
+  description = "Allow deletion of data and protected database resources in a disposable environment."
+  type        = bool
+  default     = false
+}

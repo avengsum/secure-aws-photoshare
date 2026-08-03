@@ -31,7 +31,7 @@ locals {
 resource "aws_ecr_repository" "app" {
   name                 = "secure-photoshare"
   image_tag_mutability = "IMMUTABLE"
-  force_delete         = false
+  force_delete         = var.disposable_mode
 
   image_scanning_configuration {
     scan_on_push = true
@@ -76,10 +76,11 @@ module "network" {
 module "storage" {
   source = "./modules/storage"
 
-  bucket_name            = local.photo_bucket_name
-  quarantine_bucket_name = local.quarantine_bucket_name
-  db_subnet_ids          = module.network.db_subnet_ids
-  db_security_group_id   = module.network.db_security_group_id
+  bucket_name               = local.photo_bucket_name
+  quarantine_bucket_name    = local.quarantine_bucket_name
+  db_subnet_ids             = module.network.db_subnet_ids
+  db_security_group_id      = module.network.db_security_group_id
+  allow_destructive_destroy = var.disposable_mode
 
 }
 
@@ -99,22 +100,23 @@ module "security" {
 module "compute" {
   source = "./modules/compute"
 
-  ami_id                   = data.aws_ami.amazon_linux.id
-  vpc_id                   = module.network.vpc_id
-  public_subnet_ids        = module.network.public_subnet_ids
-  private_subnet_ids       = module.network.private_subnet_ids
-  alb_security_group_id    = module.network.alb_security_group_id
-  ec2_security_group_id    = module.network.ec2_security_group_id
-  instance_profile_name    = module.security.instance_profile_name
-  photo_bucket_name        = module.storage.bucket_name
-  quarantine_bucket_name   = module.storage.quarantine_bucket_name
-  kms_key_arn              = module.storage.kms_key_arn
-  domain_name              = var.domain_name
-  secret_arn               = module.storage.secret_arn
-  flask_session_secret_arn = module.storage.flask_session_secret_arn
-  ecr_registry             = local.ecr_registry
-  ecr_repository           = aws_ecr_repository.app.name
-  aws_region               = var.aws_region
+  ami_id                    = data.aws_ami.amazon_linux.id
+  vpc_id                    = module.network.vpc_id
+  public_subnet_ids         = module.network.public_subnet_ids
+  private_subnet_ids        = module.network.private_subnet_ids
+  alb_security_group_id     = module.network.alb_security_group_id
+  ec2_security_group_id     = module.network.ec2_security_group_id
+  instance_profile_name     = module.security.instance_profile_name
+  photo_bucket_name         = module.storage.bucket_name
+  quarantine_bucket_name    = module.storage.quarantine_bucket_name
+  kms_key_arn               = module.storage.kms_key_arn
+  domain_name               = var.domain_name
+  secret_arn                = module.storage.secret_arn
+  flask_session_secret_arn  = module.storage.flask_session_secret_arn
+  ecr_registry              = local.ecr_registry
+  ecr_repository            = aws_ecr_repository.app.name
+  aws_region                = var.aws_region
+  allow_destructive_destroy = var.disposable_mode
 }
 
 module "monitoring" {
@@ -137,6 +139,7 @@ module "monitoring" {
   photo_bucket_arn = module.storage.bucket_arn
 
   enable_managed_security_services = var.enable_managed_security_services
+  allow_destructive_destroy        = var.disposable_mode
 }
 
 module "budgets" {

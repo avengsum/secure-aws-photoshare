@@ -110,7 +110,8 @@ resource "aws_kms_alias" "main" {
 resource "aws_s3_bucket" "photos" {
   #checkov:skip=CKV_AWS_18:CloudTrail S3 data events provide object-level audit logging.
   #checkov:skip=CKV_AWS_144:Single-region portfolio deployment.
-  bucket = var.bucket_name
+  bucket        = var.bucket_name
+  force_destroy = var.allow_destructive_destroy
 
   tags = {
     Name = "photoshare-bucket"
@@ -234,7 +235,8 @@ resource "aws_s3_bucket" "quarantine" {
   #checkov:skip=CKV_AWS_18:CloudTrail audits quarantine access.
   #checkov:skip=CKV_AWS_144:Single-region portfolio deployment.
   #checkov:skip=CKV2_AWS_62:Controlled destination bucket, not an event source.
-  bucket = var.quarantine_bucket_name
+  bucket        = var.quarantine_bucket_name
+  force_destroy = var.allow_destructive_destroy
 
   tags = {
     Name = "photoshare-quarantine-bucket"
@@ -380,9 +382,9 @@ resource "aws_db_instance" "mysql" {
   ]
   auto_minor_version_upgrade = true
   multi_az                   = var.db_multi_az
-  skip_final_snapshot        = false
-  final_snapshot_identifier  = "photoshare-db-final-snapshot"
-  deletion_protection        = var.db_deletion_protection
+  skip_final_snapshot        = var.allow_destructive_destroy
+  final_snapshot_identifier  = var.allow_destructive_destroy ? null : "photoshare-db-final-snapshot"
+  deletion_protection        = var.allow_destructive_destroy ? false : var.db_deletion_protection
   delete_automated_backups   = false
   apply_immediately          = false
 }

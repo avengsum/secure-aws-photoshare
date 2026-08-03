@@ -63,3 +63,9 @@ variable "enable_managed_security_services" {
   type        = bool
   default     = false
 }
+
+variable "disposable_mode" {
+  description = "Allow destructive cleanup for a disposable sandbox. Keep false for normal portfolio or production deployments."
+  type        = bool
+  default     = false
+}

@@ -58,3 +58,9 @@ variable "enable_managed_security_services" {
   type        = bool
   default     = false
 }
+
+variable "allow_destructive_destroy" {
+  description = "Allow deletion of audit buckets in a disposable environment."
+  type        = bool
+  default     = false
+}

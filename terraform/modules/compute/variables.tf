@@ -86,3 +86,9 @@ variable "aws_region" {
   type        = string
   default     = "us-east-1"
 }
+
+variable "allow_destructive_destroy" {
+  description = "Allow deletion of protected disposable-environment resources."
+  type        = bool
+  default     = false
+}
