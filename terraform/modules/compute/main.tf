@@ -16,6 +16,7 @@ resource "aws_acm_certificate" "app" {
   }
 }
 
+#checkov:skip=CKV_AWS_341:Containerized Flask requires IMDSv2 hop limit 2 for role credentials; IMDSv2 is required, metadata tags are disabled, and the EC2 role is least privilege.
 resource "aws_launch_template" "app" {
   name_prefix   = "photoshare-"
   image_id      = var.ami_id
