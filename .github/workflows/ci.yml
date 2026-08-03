@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r app/requirements.txt
-          pip install pytest bandit safety pylint
+          pip install pytest bandit pip-audit pylint
 
       - name: Run pylint
         run: pylint app/app.py --disable=C0114,C0115,C0116,R0903 --fail-under=7
@@ -46,24 +46,24 @@ jobs:
           name: bandit-security-report
           path: bandit-report.json
 
-      - name: Safety dependency check
+      - name: Python dependency security check
         shell: bash
         run: |
           set +e
-          safety scan --target app --output json > safety-report.json
-          safety_status=$?
-          if [ "$safety_status" -ne 0 ]; then
-            echo "Safety found dependency vulnerabilities or scan errors:"
-            cat safety-report.json
+          pip-audit -r app/requirements.txt -f json > pip-audit-report.json
+          audit_status=$?
+          if [ "$audit_status" -ne 0 ]; then
+            echo "pip-audit found dependency vulnerabilities or scan errors:"
+            cat pip-audit-report.json
           fi
-          exit "$safety_status"
+          exit "$audit_status"
 
-      - name: Upload Safety report
+      - name: Upload dependency security report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: safety-dependency-report
-          path: safety-report.json
+          name: pip-audit-dependency-report
+          path: pip-audit-report.json
 
   docker-build:
     runs-on: ubuntu-latest
