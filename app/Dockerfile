@@ -3,7 +3,8 @@
 FROM python:3.11-alpine3.22 AS builder
 WORKDIR /build
 COPY requirements.txt .
-RUN python -m venv /venv \
+RUN apk upgrade --no-cache \
+    && python -m venv /venv \
     && /venv/bin/pip install --no-cache-dir --upgrade pip \
     && /venv/bin/pip install --no-cache-dir -r requirements.txt \
     && rm -rf /venv/lib/python3.11/site-packages/pip* \
@@ -17,7 +18,14 @@ ENV PATH="/venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-RUN addgroup -S photoshare && adduser -S -G photoshare -s /sbin/nologin photoshare
+RUN apk upgrade --no-cache \
+    && rm -rf /usr/local/lib/python3.11/site-packages/pip* \
+              /usr/local/lib/python3.11/site-packages/setuptools* \
+              /usr/local/lib/python3.11/site-packages/wheel* \
+              /usr/local/lib/python3.11/site-packages/jaraco* \
+    && rm -f /usr/local/bin/pip /usr/local/bin/pip3 \
+    && addgroup -S photoshare \
+    && adduser -S -G photoshare -s /sbin/nologin photoshare
 WORKDIR /app
 COPY --from=builder --chown=photoshare:photoshare /venv /venv
 COPY --chown=photoshare:photoshare . .
