@@ -57,7 +57,9 @@ resource "aws_launch_template" "app" {
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
-    http_put_response_hop_limit = 1
+    # Containers need one additional network hop to retrieve the EC2 role
+    # credentials. IMDSv2 remains mandatory, and metadata tags stay disabled.
+    http_put_response_hop_limit = 2
     instance_metadata_tags      = "disabled"
   }
 
