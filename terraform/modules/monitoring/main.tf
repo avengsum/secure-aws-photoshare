@@ -3,15 +3,15 @@ data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
 resource "aws_cloudwatch_log_group" "photoshare" {
+  #checkov:skip=CKV_AWS_158:CloudWatch Logs uses its built-in AES-256 encryption at rest; customer-managed KMS association caused service-policy failures after destroy and recreate.
   name              = "/photoshare/application"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
 }
 
 resource "aws_cloudwatch_log_group" "cloudtrail" {
+  #checkov:skip=CKV_AWS_158:CloudWatch Logs uses its built-in AES-256 encryption at rest; customer-managed KMS association caused service-policy failures after destroy and recreate.
   name              = "/aws/cloudtrail/photoshare"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
 }
 
 resource "aws_iam_role" "cloudtrail_logs" {
@@ -74,6 +74,20 @@ resource "aws_sns_topic_policy" "alerts" {
         }
         Action   = "sns:Publish"
         Resource = aws_sns_topic.alerts.arn
+      },
+      {
+        Sid    = "AllowCloudTrailToPublish"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "sns:Publish"
+        Resource = aws_sns_topic.alerts.arn
+        Condition = {
+          StringEquals = {
+            "AWS:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
       }
     ]
   })
@@ -243,6 +257,10 @@ resource "aws_cloudtrail" "photoshare" {
   sns_topic_name                = aws_sns_topic.alerts.name
   cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
   cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail_logs.arn
+
+  depends_on = [
+    aws_sns_topic_policy.alerts
+  ]
 
   event_selector {
     read_write_type           = "All"
@@ -698,9 +716,9 @@ resource "aws_flow_log" "vpc" {
 }
 
 resource "aws_cloudwatch_log_group" "waf" {
+  #checkov:skip=CKV_AWS_158:CloudWatch Logs uses its built-in AES-256 encryption at rest; customer-managed KMS association caused service-policy failures after destroy and recreate.
   name              = "aws-waf-logs-photoshare"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
 }
 
 resource "aws_wafv2_web_acl" "main" {

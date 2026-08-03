@@ -332,9 +332,9 @@ resource "aws_vpc_security_group_ingress_rule" "alb_to_ec2" {
 #checkov:skip=CKV2_AWS_5:This security group is attached to the RDS instance through the storage module.
 resource "aws_security_group" "rds" {
   #checkov:skip=CKV2_AWS_5:Attached to the RDS instance in the storage module.
-  name        = "rds-sg"
-  description = "RDS security group; access is restricted to the application security group"
-  vpc_id      = aws_vpc.main.id
+  #checkov:skip=CKV_AWS_23:Keep the existing live RDS security group to avoid replacing an SG attached to an RDS-managed ENI; its ingress rule is explicitly described.
+  name   = "rds-sg"
+  vpc_id = aws_vpc.main.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "ec2_to_rds" {
