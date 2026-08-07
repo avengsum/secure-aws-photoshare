@@ -39,9 +39,6 @@ data "aws_iam_policy_document" "github_permissions" {
       "ssm:GetCommandInvocation",
       "ssm:DescribeInstanceInformation"
     ]
-
-    # GetCommandInvocation does not support resource-level authorization;
-    # this is read-only access used to retrieve the result of SendCommand.
     resources = ["*"]
   }
 

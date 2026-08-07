@@ -80,7 +80,7 @@ jobs:
           for INSTANCE_ID in $INSTANCE_IDS; do
             echo "Waiting for SSM Agent to become online on $INSTANCE_ID..."
             ONLINE=""
-            for i in $(seq 1 30); do
+            for i in $(seq 1 60); do
               ONLINE=$(aws ssm describe-instance-information \
                 --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
                 --query "InstanceInformationList[0].PingStatus" \
@@ -92,7 +92,7 @@ jobs:
             done
 
             if [ "$ONLINE" != "Online" ]; then
-              echo "ERROR: SSM Agent is not online on $INSTANCE_ID after 5 minutes"
+              echo "ERROR: SSM Agent is not online on $INSTANCE_ID after 10 minutes"
               exit 1
             fi
 

@@ -1,139 +1,208 @@
-# Threat Model — SecurePhotoshare
+# Secure PhotoShare Threat Model
 
-## Overview
+## 1. System Overview
 
-This document identifies threats to the SecurePhotoshare application using the STRIDE framework, maps each threat to implemented mitigations, and notes residual risks.
+Secure PhotoShare is a Flask application that allows authenticated users to upload and view their own images.
 
-**System Scope:** Web application allowing authenticated users to upload and store photos on AWS infrastructure.
+The application runs as a non-root Docker container on EC2 instances in private subnets. Internet traffic passes through AWS WAF and an Application Load Balancer, then through Nginx to Gunicorn and Flask.
 
-**Trust Boundaries:**
-1. Internet → ALB (untrusted → semi-trusted)
-2. ALB → Application (semi-trusted → trusted)
-3. Application → Database (trusted → trusted)
-4. Application → S3 (trusted → trusted)
-5. User browser → Application (untrusted → trusted)
+The application uses:
 
----
+- RDS MySQL for users and upload metadata
+- Private S3 buckets for accepted and rejected files
+- KMS for encryption
+- Secrets Manager for database and Flask session secrets
+- GitHub Actions, ECR, OIDC, and SSM for deployment
+- Terraform for AWS infrastructure
 
-## Data Flow Diagram
+## 2. Components
 
+| Component | Responsibility |
+|---|---|
+| User browser | Sends credentials, forms, and image uploads |
+| WAF and ALB | Public entry point, filtering, routing, and health checks |
+| Nginx and Docker application | Serves the Flask application on EC2 |
+| RDS MySQL | Stores users and upload ownership metadata |
+| S3 and KMS | Stores and encrypts photos and quarantined files |
+| Secrets Manager | Stores database and session secrets |
+| GitHub Actions and ECR | Builds, scans, stores, and releases images |
+| Terraform | Creates and manages AWS infrastructure |
+
+## 3. Data Flow and Trust Boundaries
+
+```text
+Browser → WAF → ALB → Nginx → Flask container → RDS MySQL
+                                      ├──→ S3 photo bucket
+                                      ├──→ S3 quarantine bucket
+                                      └──→ Secrets Manager / KMS
+
+Developer → GitHub → GitHub Actions → OIDC role → ECR and SSM → EC2
 ```
-[User Browser] ──HTTPS──▶ [WAF] ──▶ [ALB] ──▶ [EC2/Docker App]
-                                                     │
-                                          ┌──────────┼──────────┐
-                                          ▼          ▼          ▼
-                                      [RDS MySQL] [S3 Photos] [S3 Quarantine]
-                                          ▲
-                                          │
-                                    [Secrets Manager]
-```
 
----
+**TB-01: Browser → Application**
 
-## STRIDE Analysis
+Requests, credentials, form values, and uploaded files are untrusted.
 
-### Spoofing (Identity)
+**TB-02: Application → AWS data services**
 
-| Threat | Impact | Mitigation | Status |
-|--------|--------|------------|--------|
-| Credential brute force | Account takeover | Rate limiting (10/min on login), scrypt hashing | Mitigated |
-| Session hijacking | Impersonation | HttpOnly + SameSite cookies, session timeout (30m), session regeneration on login | Mitigated |
-| Credential stuffing | Mass compromise | Rate limiting, generic error messages (no user enumeration) | Partially mitigated |
+The application uses an EC2 IAM role to access only required S3 prefixes, secrets, KMS, and ECR resources.
 
-**Residual risk:** No MFA implemented. For a production system, TOTP or WebAuthn would further reduce session hijacking risk.
+**TB-03: Application → RDS**
 
----
+Database access is private and restricted by security groups. User input must never become executable SQL.
 
-### Tampering (Data Integrity)
+**TB-04: GitHub Actions → AWS**
 
-| Threat | Impact | Mitigation | Status |
-|--------|--------|------------|--------|
-| Image file manipulation (polyglot) | Code execution via uploaded file | Magic byte validation, Pillow verify, EXIF strip (re-encodes image) | Mitigated |
-| SQL injection | Data modification | Parameterized queries (PyMySQL %s placeholders) | Mitigated |
-| S3 object tampering | Data corruption | Bucket versioning, KMS encryption, bucket policy denies unencrypted uploads | Mitigated |
-| CSRF attacks | Unauthorized actions | Flask-WTF CSRF tokens on all state-changing forms | Mitigated |
-| Terraform state tampering | Infrastructure compromise | S3 state bucket with versioning, DynamoDB locking | Mitigated |
+GitHub receives temporary AWS credentials through OIDC. The role trust policy restricts access to the repository, branch, and deployment environment.
 
----
+## 4. STRIDE Threat Analysis
 
-### Repudiation (Audit Trail)
+### S — Spoofing
 
-| Threat | Impact | Mitigation | Status |
-|--------|--------|------------|--------|
-| User denies upload | Dispute resolution | SHA-256 hash stored per upload, structured audit logs with request IDs | Mitigated |
-| Admin denies access | Compliance failure | CloudTrail (multi-region, S3 data events, log file validation) | Mitigated |
-| Log tampering | Evidence destruction | CloudTrail log file validation, S3 versioning on log bucket | Mitigated |
+**TH-01: Attacker uses stolen or guessed credentials**
 
----
+An attacker may attempt credential stuffing or brute-force login to access another user's photos.
 
-### Information Disclosure (Confidentiality)
+**Affected components:** Registration, login, and session handling
 
-| Threat | Impact | Mitigation | Status |
-|--------|--------|------------|--------|
-| Photos exposed publicly | Privacy breach | S3 public access block, no pre-signed URLs to untrusted parties, bucket policy | Mitigated |
-| EXIF metadata leaks GPS/device info | Privacy violation | EXIF stripped before storage | Mitigated |
-| Database credentials leaked | Full compromise | Secrets Manager (no hardcoded creds), KMS encryption | Mitigated |
-| Error messages reveal internals | Reconnaissance | Generic error messages to user, detailed logs server-side only | Mitigated |
-| Network sniffing | Credential theft | TLS 1.3 enforced, HSTS header, HTTP→HTTPS redirect | Mitigated |
-| S3 data in transit | Data exposure | Bucket policy denies `aws:SecureTransport = false` | Mitigated |
+**Boundary:** TB-01
 
-**Residual risk:** No encryption of photos at the application layer (relies on S3 SSE-KMS). A compromised IAM role with KMS decrypt permission could access photos.
+**Impact:** Account takeover and unauthorized photo access
 
----
+**Controls:**
 
-### Denial of Service (Availability)
+- Passwords are stored using Werkzeug `scrypt` hashing.
+- Login is limited to 10 requests per minute per IP.
+- Registration is limited to 5 requests per hour per IP.
+- Invalid credentials use a generic error message.
+- Sessions are HttpOnly, SameSite=Lax, regenerated after login, and expire after 30 minutes.
 
-| Threat | Impact | Mitigation | Status |
-|--------|--------|------------|--------|
-| Volumetric DDoS | Service unavailable | WAF rate limiting (1000 req/5min), ALB scaling | Partially mitigated |
-| Large file upload exhaustion | Resource starvation | 5 MB limit (Nginx + app), rate limiting (10 uploads/min) | Mitigated |
-| Application-layer DoS | Degraded performance | Gunicorn worker timeout (30s), ASG auto-scaling | Mitigated |
-| Database connection exhaustion | Service failure | Connection timeout (5s), read timeout (10s) | Partially mitigated |
+**Residual risk:** MFA and breached-password detection are not implemented.
 
-**Residual risk:** No CloudFront (would add Shield Standard for DDoS). Single NAT gateway is a single point of failure. No connection pooling on DB.
+### T — Tampering
 
----
+**TH-02: Malicious or malformed file is uploaded**
 
-### Elevation of Privilege
+An attacker may upload a disguised file, corrupted image, or file containing unwanted metadata.
 
-| Threat | Impact | Mitigation | Status |
-|--------|--------|------------|--------|
-| Container escape | Host compromise | Non-root container user, minimal base image (python:slim) | Partially mitigated |
-| IAM role over-privilege | Lateral movement | Prefix-scoped S3 access, KMS via-service condition, no wildcard actions | Mitigated |
-| RDS access from app tier | Data exfiltration | SG restricts DB access to app SG only, private subnet with no internet route | Mitigated |
-| SSM command injection | Instance compromise | No SSH keys, SSM audit trail via CloudTrail, IAM-gated access | Mitigated |
+**Affected components:** Upload endpoint and S3
 
-**Residual risk:** EC2 instance has outbound internet access (via NAT) for pulling Docker images. A compromised container could exfiltrate data outbound. Mitigation: VPC endpoints reduce need for NAT; future work would add egress filtering.
+**Boundary:** TB-01 and TB-02
 
----
+**Impact:** Privacy exposure, unsafe processing, or storage abuse
 
-## Attack Scenarios Considered
+**Controls:**
 
-### 1. Malicious File Upload
-**Attack:** Attacker uploads a PHP webshell disguised as a JPEG.
-**Defense chain:** Extension check → MIME check → Magic byte check → Pillow verify → EXIF strip (re-encodes as clean image) → Files stored in S3 (never served directly by the application server).
+- Maximum upload size is 5 MB.
+- Filename, extension, MIME type, and magic bytes are checked.
+- Pillow verifies the image before storage.
+- Images are re-encoded to remove EXIF metadata.
+- Invalid files are written to a separate encrypted quarantine bucket.
+- S3 requires encrypted transport and KMS encryption.
 
-### 2. Credential Stuffing
-**Attack:** Automated login attempts with breached credential lists.
-**Defense chain:** Rate limiting (10/min per IP) → Generic error messages (no user enumeration) → Scrypt hashing (expensive to verify) → Structured logging of failed attempts → GuardDuty anomaly detection.
+**Residual risk:** Quarantine is not antivirus or malware scanning. A production system should add a malware-scanning pipeline.
 
-### 3. Insider Threat (AWS Console Access)
-**Attack:** Malicious admin accesses photos directly via AWS console.
-**Defense chain:** CloudTrail S3 data events → IAM Access Analyzer → Security Hub findings → SNS alerts on suspicious access patterns.
+**TH-03: User input changes database behavior**
 
-### 4. Supply Chain Attack (Dependency Poisoning)
-**Attack:** Malicious package introduced via dependency update.
-**Defense chain:** Pinned versions in requirements.txt → Safety scan in CI → Trivy container scan → Minimal base image reduces attack surface.
+An attacker may attempt SQL injection to modify users or upload ownership records.
 
----
+**Controls:** PyMySQL queries use parameterized values, RDS is private, and the database security group allows access only from the EC2 application security group.
 
-## Accepted Risks
+### R — Repudiation
 
-| Risk | Reason | Future Mitigation |
-|------|--------|-------------------|
-| No MFA | Complexity vs. demo scope | Add TOTP via pyotp |
-| No CloudFront | Cost, demo simplicity | Add CF + Shield Standard |
-| Single NAT gateway | Cost | Deploy NAT per AZ |
-| No connection pooling | Complexity | Add SQLAlchemy with pool |
-| No antivirus scan | Cost (Lambda + ClamAV) | Add S3 trigger → scan pipeline |
-| Outbound egress unrestricted | Docker pull requirement | Add egress proxy or VPC endpoint for ECR |
+**TH-04: User or developer denies an action**
+
+A user may deny uploading a file, or a developer may deny making a deployment or security-sensitive change.
+
+**Affected components:** Application, AWS services, and GitHub repository
+
+**Impact:** Difficult incident investigation and weak accountability
+
+**Controls:**
+
+- Application logs include request IDs, login events, upload events, rejection reasons, and file hashes.
+- ALB and WAF access logs are enabled.
+- CloudTrail records AWS API activity and S3 data events.
+- VPC Flow Logs and CloudWatch logs support investigation.
+- Git history, pull requests, reviews, and workflow history provide development audit evidence.
+
+**Required operational control:** Protect the `main` branch and require reviews for workflow, Terraform, IAM, and application changes.
+
+### I — Information Disclosure
+
+**TH-05: Private photos or secrets are exposed**
+
+An attacker may access an S3 object, database credential, Flask secret, or session cookie.
+
+**Affected components:** S3, RDS, Secrets Manager, KMS, and browser sessions
+
+**Boundary:** TB-01 and TB-02
+
+**Impact:** Privacy breach, account takeover, or AWS data access
+
+**Controls:**
+
+- S3 public access is blocked.
+- Photos and RDS are encrypted with KMS.
+- Secrets are not stored in source code or Docker images.
+- The EC2 IAM role is scoped to required resources and prefixes.
+- Dashboard queries restrict results to the authenticated user's ID.
+- Images are served through one-hour presigned URLs rather than public objects.
+- The container runs as a non-root user.
+
+**Residual risks:** A leaked presigned URL works until expiry. The current HTTP-only fallback does not provide transport confidentiality and is not suitable for public production use.
+
+### D — Denial of Service
+
+**TH-06: Excess traffic or expensive requests exhaust the application**
+
+An attacker may send repeated login, upload, or web requests to consume application, database, or network capacity.
+
+**Affected components:** WAF, ALB, EC2, RDS, and S3
+
+**Impact:** Slow service or application unavailability
+
+**Controls:**
+
+- AWS WAF managed rules and IP rate limiting are enabled.
+- Flask applies global, authentication, registration, and upload limits.
+- Uploads are limited to 5 MB.
+- Gunicorn has worker and request time limits.
+- ALB health checks and the Auto Scaling Group replace unhealthy instances.
+- Deployment stops if targets do not become healthy.
+
+**Residual risk:** The design has one NAT gateway and does not provide full volumetric DDoS protection or application-level database connection pooling.
+
+### E — Elevation of Privilege
+
+**TH-07: Compromised application gains broader AWS or host access**
+
+An attacker who compromises the application may attempt to access the EC2 host, instance metadata, other S3 data, secrets, or deployment capabilities.
+
+**Affected components:** Docker, EC2 IAM role, IMDS, SSM, and AWS services
+
+**Impact:** Lateral movement, data theft, or infrastructure compromise
+
+**Controls:**
+
+- The container runs as non-root with a minimal Alpine image.
+- IMDSv2 is required and metadata tags are disabled.
+- EC2 instances are private and SSH is not exposed.
+- SSM provides audited, IAM-controlled administration.
+- The EC2 role uses scoped S3, Secrets Manager, KMS, and ECR permissions.
+- RDS accepts traffic only from the application security group.
+- GitHub deploys through OIDC temporary credentials, not long-lived AWS keys.
+
+**Residual risk:** A fully compromised application can use the permissions of the EC2 role. Outbound EC2 access through NAT should be restricted further for higher-sensitivity workloads.
+
+## 5. Risk Priorities
+
+| Priority | Threat | Action |
+|---|---|---|
+| High | TH-05 information disclosure | Enable HTTPS with ACM and set `SESSION_COOKIE_SECURE=true`. |
+| High | TH-04 CI/CD repudiation and tampering | Enforce protected `main`, required CI checks, and pull-request review. |
+| High | TH-02 malicious upload | Add malware scanning before accepting files. |
+| Medium | TH-07 privilege escalation | Review IAM permissions and restrict outbound traffic. |
+| Medium | TH-06 availability | Consider NAT per AZ, connection pooling, and stronger edge protection. |
+
+This model describes the current Secure PhotoShare implementation and should be reviewed when authentication, upload processing, IAM permissions, or deployment workflows change.

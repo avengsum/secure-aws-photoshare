@@ -1,5 +1,3 @@
-# --- AWS Budgets (Free Tier Protection) ---
-
 resource "aws_budgets_budget" "zero_spend_alert" {
   name         = "photoshare-zero-spend-alert"
   budget_type  = "COST"

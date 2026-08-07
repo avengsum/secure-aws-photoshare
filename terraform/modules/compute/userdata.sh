@@ -4,8 +4,7 @@ set -euo pipefail
 # Start SSM before long package operations so the instance remains observable
 # even if package installation is slow or fails.
 if ! systemctl cat amazon-ssm-agent.service >/dev/null 2>&1; then
-  echo "amazon-ssm-agent.service is missing from the AMI" >&2
-  exit 1
+  dnf install -y amazon-ssm-agent
 fi
 systemctl enable --now amazon-ssm-agent.service
 

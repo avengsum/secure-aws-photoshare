@@ -7,8 +7,10 @@ data "aws_ami" "amazon_linux" {
   owners = ["amazon"]
 
   filter {
-    name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    name = "name"
+    # Exclude al2023-ami-minimal images because the minimal image may not
+    # include the SSM Agent required for controlled deployments.
+    values = ["al2023-ami-2023*-kernel-*-x86_64"]
   }
 
   filter {
