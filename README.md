@@ -121,7 +121,20 @@ A security-hardened photo sharing application deployed on AWS, demonstrating def
 - GitHub repository with Actions enabled
 - A verified email address for SNS budget and alert notifications
 
-### 1. Configure Terraform
+### 1. Initialize the Terraform Backend
+
+Before initializing the main Terraform project, create the remote state resources. The bootstrap configuration creates the encrypted S3 state bucket and DynamoDB lock table used by `terraform/backend.tf`.
+
+```powershell
+cd bootstrap
+terraform init
+terraform plan
+terraform apply
+```
+
+Run this bootstrap step only when the backend resources do not already exist.
+
+### 2. Configure Terraform
 
 ```powershell
 cd terraform
@@ -131,7 +144,7 @@ Copy-Item terraform.tfvars.example terraform.tfvars
 
 Update `terraform.tfvars` with your alert email and globally unique CloudTrail bucket name. The Terraform backend uses the S3 state bucket and DynamoDB lock table configured in `backend.tf`.
 
-### 2. Create the AWS infrastructure
+### 3. Create the AWS infrastructure
 
 ```powershell
 terraform init
@@ -142,7 +155,7 @@ terraform apply
 
 Terraform creates the VPC, private EC2 Auto Scaling Group, ALB, RDS, S3 buckets, KMS key, Secrets Manager secrets, ECR repository, monitoring services, IAM roles, and GitHub OIDC deployment role.
 
-### 3. Configure GitHub OIDC
+### 4. Configure GitHub OIDC
 
 The Terraform OIDC provider trusts this repository and the `main` branch. In GitHub, add this Actions secret:
 
@@ -152,7 +165,7 @@ AWS_DEPLOY_ROLE_ARN=arn:aws:iam::<account-id>:role/GitHubActionsDeployRole
 
 The workflow uses short-lived OIDC credentials. No long-lived AWS access keys are stored in GitHub.
 
-### 4. Deploy the application
+### 5. Deploy the application
 
 Push changes to `main`:
 
@@ -164,7 +177,7 @@ git push origin main
 
 GitHub Actions runs CI checks, builds the Docker image from `app/Dockerfile`, scans it with Trivy, pushes an immutable image tag to ECR, and deploys it to EC2 through SSM. The deployment finishes only after the ALB target health check passes.
 
-### 5. Access the application
+### 6. Access the application
 
 After Terraform finishes, print the ALB address with:
 
@@ -174,7 +187,7 @@ terraform output -raw alb_dns_name
 
 Copy the displayed address into your browser. HTTPS requires a domain name and ACM certificate; the empty-domain configuration is the HTTP development fallback.
 
-### 6. Controlled Force-Destroy
+### 7. Controlled Force-Destroy
 
 For a disposable environment only:
 
@@ -235,4 +248,3 @@ Screenshots of the application and AWS architecture.
 
 
 ---
-
