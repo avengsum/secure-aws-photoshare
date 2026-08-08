@@ -4,34 +4,7 @@ A security-hardened photo sharing application deployed on AWS, demonstrating def
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          AWS Cloud (VPC)                             │
-│                                                                     │
-│  ┌──────────┐    ┌──────────────┐    ┌────────────────────────────┐ │
-│  │  WAFv2   │───▶│     ALB      │───▶│   Private Subnets (App)    │ │
-│  │ 5 Rules  │    │  TLS 1.3     │    │                            │ │
-│  └──────────┘    │  HTTPS Only  │    │  ┌──────┐    ┌──────┐     │ │
-│                  └──────────────┘    │  │EC2+  │    │EC2+  │     │ │
-│                                      │  │Docker│    │Docker│     │ │
-│  ┌──────────────────────────┐        │  └──┬───┘    └──┬───┘     │ │
-│  │   Public Subnets (ALB)   │        └─────┼──────────┼──────────┘ │
-│  └──────────────────────────┘              │          │            │
-│                                            ▼          ▼            │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │              Private Subnets (Data)                          │   │
-│  │   ┌────────────┐     ┌────────────┐     ┌──────────────┐   │   │
-│  │   │  RDS MySQL │     │  S3 Photos │     │S3 Quarantine │   │   │
-│  │   │  Encrypted │     │ KMS + SSE  │     │  Rejected    │   │   │
-│  │   └────────────┘     └────────────┘     └──────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  ┌─────────────────────── Monitoring ────────────────────────────┐  │
-│  │ CloudTrail │ GuardDuty │ Security Hub │ Inspector │ Config    │  │
-│  │ WAF Logs   │ Flow Logs │ IAM Analyzer │ Alarms   │ SNS       │  │
-│  └───────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-```
+![alt text](screenshots/photoshare.png)
 
 ## Security Controls Implemented
 
@@ -242,9 +215,6 @@ Screenshots of the application and AWS architecture.
 
 **Home**
 ![alt text](screenshots/home.png)
-
-
-
 
 
 ---
