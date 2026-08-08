@@ -217,8 +217,22 @@ This removes the application infrastructure, images, photos, and database data a
 
 ## Screenshots
 
-Screenshots of the application, AWS architecture, CI/CD pipeline, and security dashboards will be added here.
+Screenshots of the application and AWS architecture.
+![alt text](screenshots/Architecture.png)
+
+**Login**
+![alt text](screenshots/login.png)
+
+**Register**
+
+![alt text](screenshots/register.png)
+
+**Home**
+![alt text](screenshots/home.png)
+
+
+
+
 
 ---
 
-Built as a security engineering portfolio project demonstrating end-to-end secure system design on AWS.
