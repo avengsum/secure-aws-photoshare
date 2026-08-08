@@ -94,6 +94,13 @@ A security-hardened photo sharing application deployed on AWS, demonstrating def
 - GitHub repository with Actions enabled
 - A verified email address for SNS budget and alert notifications
 
+### 0. Clone the Repository
+
+```powershell
+git clone https://github.com/avengsum/secure_aws_photoshare.git
+cd secure_aws_photoshare
+```
+
 ### 1. Initialize the Terraform Backend
 
 Before initializing the main Terraform project, create the remote state resources. The bootstrap configuration creates the encrypted S3 state bucket and DynamoDB lock table used by `terraform/backend.tf`.
